@@ -31,10 +31,15 @@
 <script src="js/products.js"></script>
 <script src="js/app.js"></script>
 <script>
-  mountChrome('shop');
-  const id = qs('id') || 'p01';
-  const p = PRODUCTS.find(x=>x.id===id) || PRODUCTS[0];
-  document.title = p.name + ' — Acre';
+  let p;
+  bootstrap('shop').then(()=>{
+    const id = qs('id') || (PRODUCTS[0] && PRODUCTS[0].id);
+    p = PRODUCTS.find(x=>x.id===id) || PRODUCTS[0];
+    if(!p){ document.getElementById('pd').innerHTML='<div class="empty"><h2>Product not found</h2></div>'; return; }
+    render();
+  });
+  function render(){
+    document.title = p.name + ' — Acre';
 
   const optsHtml = Object.entries(p.options).map(([k,vals])=>`
     <div class="opt">
@@ -82,6 +87,7 @@
     document.querySelectorAll('[data-opt]').forEach(s=>opts[s.dataset.opt]=s.value);
     Cart.add(p.id, +qty.value, opts);
   };
+  } /* end render */
 </script>
 </body>
 </html>

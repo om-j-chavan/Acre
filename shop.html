@@ -43,7 +43,6 @@
 <script src="js/products.js"></script>
 <script src="js/app.js"></script>
 <script>
-  mountChrome('shop');
   const cat = qs('cat');
   if(cat){
     document.getElementById('cat-eyebrow').textContent = 'Category';
@@ -58,8 +57,10 @@
     document.getElementById('count').textContent = list.length + ' items';
     document.getElementById('grid').innerHTML = list.map(productCard).join('');
   }
-  document.getElementById('sort').addEventListener('change', render);
-  render();
+  bootstrap('shop').then(()=>{
+    document.getElementById('sort').addEventListener('change', render);
+    render();
+  });
 </script>
 </body>
 </html>
