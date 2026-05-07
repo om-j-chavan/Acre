@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Create account — Acre</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+<div id="header-mount"></div>
+
+<section class="pagehead"><div class="container"><span class="eyebrow">Account</span><h1>Create your account</h1></div></section>
+
+<div class="container" style="max-width:460px;padding:60px 28px 100px">
+  <form id="form" class="checkout" style="display:block">
+    <div class="form-block">
+      <label>Name</label>
+      <input name="name" required autofocus/>
+      <label>Email</label>
+      <input name="email" type="email" required/>
+      <label>Password (minimum 6 characters)</label>
+      <input name="password" type="password" minlength="6" required/>
+      <p id="err" style="color:var(--danger);font-size:.85rem;min-height:1.2em;margin:10px 0 0"></p>
+      <button type="submit" class="btn primary full" style="margin-top:14px">Create account</button>
+    </div>
+    <p class="muted" style="text-align:center;font-size:.88rem">
+      Already have an account? <a href="login.html" style="text-decoration:underline">Sign in</a>
+    </p>
+  </form>
+</div>
+
+<div id="footer-mount"></div>
+<script src="js/products.js"></script>
+<script src="js/app.js"></script>
+<script>
+  bootstrap('signup').then(()=>{
+    if(Auth.user) location.href = 'account.html';
+  });
+  document.getElementById('form').onsubmit = async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    try {
+      await Auth.signup(fd.get('email'), fd.get('name'), fd.get('password'));
+      location.href = 'account.html';
+    } catch(err){
+      document.getElementById('err').textContent = err.message;
+    }
+  };
+</script>
+</body>
+</html>

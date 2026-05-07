@@ -91,9 +91,10 @@
 <script src="js/products.js"></script>
 <script src="js/app.js"></script>
 <script>
-  mountChrome('home');
-  document.getElementById('featured').innerHTML = PRODUCTS.slice(0,4).map(productCard).join('');
-  document.getElementById('all').innerHTML = PRODUCTS.slice(4,12).map(productCard).join('');
+  bootstrap('home').then(()=>{
+    document.getElementById('featured').innerHTML = PRODUCTS.slice(0,4).map(productCard).join('');
+    document.getElementById('all').innerHTML = PRODUCTS.slice(4,12).map(productCard).join('');
+  });
 </script>
 </body>
 </html>

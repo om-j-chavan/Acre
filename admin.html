@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Admin — Acre</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+<style>
+  .admin-tabs{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:30px}
+  .admin-tabs button{
+    background:none;border:none;padding:14px 24px;cursor:pointer;
+    font-size:.78rem;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--ink-soft);border-bottom:2px solid transparent;
+  }
+  .admin-tabs button.active{color:var(--ink);border-bottom-color:var(--ink)}
+  table.admin{width:100%;border-collapse:collapse;font-size:.9rem}
+  table.admin th,table.admin td{text-align:left;padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+  table.admin th{font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);font-weight:400}
+  table.admin tr:hover td{background:var(--bg-2)}
+  .row-actions button{background:none;border:1px solid var(--line);padding:6px 12px;font-size:.72rem;letter-spacing:.15em;text-transform:uppercase;cursor:pointer;margin-right:6px}
+  .row-actions button:hover{border-color:var(--ink)}
+  .row-actions button.danger{color:var(--danger);border-color:#d8a89e}
+  .modal{
+    position:fixed;inset:0;background:rgba(20,18,14,.5);display:none;
+    align-items:center;justify-content:center;z-index:100;padding:20px;
+  }
+  .modal.show{display:flex}
+  .modal .panel{
+    background:var(--bg);max-width:560px;width:100%;max-height:90vh;
+    overflow:auto;padding:32px;border:1px solid var(--line);
+  }
+  .modal label{display:block;font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);margin:14px 0 6px}
+  .modal input,.modal select,.modal textarea{
+    width:100%;padding:12px;border:1px solid var(--line);background:var(--bg);
+    font-family:inherit;font-size:.92rem;
+  }
+  .modal textarea{min-height:80px;resize:vertical}
+  .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:40px}
+  .stat-grid .stat{background:var(--bg-2);padding:24px;border:1px solid var(--line)}
+  .stat .num{font-family:var(--serif);font-size:2.2rem;line-height:1}
+  .stat .lbl{font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft);margin-top:6px}
+  @media(max-width:780px){.stat-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div id="header-mount"></div>
+
+<section class="pagehead"><div class="container"><span class="eyebrow">Studio</span><h1>Admin</h1></div></section>
+
+<div class="container" style="padding:40px 28px 100px">
+  <div class="stat-grid" id="stats"></div>
+  <div class="admin-tabs">
+    <button data-tab="products" class="active">Products</button>
+    <button data-tab="orders">Orders</button>
+    <button data-tab="users">Users</button>
+  </div>
+  <div id="tab-body"></div>
+</div>
+
+<div class="modal" id="modal"><div class="panel" id="modal-body"></div></div>
+
+<div id="footer-mount"></div>
+<script src="js/products.js"></script>
+<script src="js/app.js"></script>
+<script>
+let allOrders=[], allUsers=[], currentTab='products';
+
+bootstrap('admin').then(async ()=>{
+  if(!Auth.user){ location.href = 'login.html?next=admin.html'; return; }
+  if(Auth.user.role !== 'admin'){
+    document.querySelector('.container').innerHTML = '<div class="empty"><h2>Forbidden</h2><p>Admin access only.</p><a href="index.html" class="btn">Home</a></div>';
+    return;
+  }
+  await loadAll();
+  renderStats();
+  switchTab('products');
+  document.querySelectorAll('.admin-tabs button').forEach(b=>{
+    b.onclick = ()=>switchTab(b.dataset.tab);
+  });
+});
+
+async function loadAll(){
+  await loadProducts();
+  try { allOrders = (await api('/api/orders')).orders || []; } catch{ allOrders=[]; }
+  try { allUsers  = (await api('/api/users')).users  || []; } catch{ allUsers=[]; }
+}
+
+function renderStats(){
+  const revenue = allOrders.reduce((s,o)=>s+o.total,0);
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="num">${PRODUCTS.length}</div><div class="lbl">Products</div></div>
+    <div class="stat"><div class="num">${allOrders.length}</div><div class="lbl">Orders</div></div>
+    <div class="stat"><div class="num">${allUsers.length}</div><div class="lbl">Users</div></div>
+    <div class="stat"><div class="num">${fmt(revenue)}</div><div class="lbl">Revenue</div></div>`;
+}
+
+function switchTab(name){
+  currentTab = name;
+  document.querySelectorAll('.admin-tabs button').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
+  if(name==='products') renderProducts();
+  if(name==='orders')   renderOrders();
+  if(name==='users')    renderUsers();
+}
+
+// ---------- Products ----------
+function renderProducts(){
+  document.getElementById('tab-body').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h2 style="margin:0">Products</h2>
+      <button class="btn primary small" onclick="editProduct()">+ Add product</button>
+    </div>
+    <table class="admin">
+      <thead><tr><th></th><th>Name</th><th>Category</th><th>Price</th><th>Badge</th><th></th></tr></thead>
+      <tbody>
+        ${PRODUCTS.map(p=>`
+          <tr>
+            <td style="width:60px"><div style="width:48px;height:48px;background:var(--bg-2);position:relative;overflow:hidden">${productImage(p)}</div></td>
+            <td>${p.name}</td>
+            <td>${p.cat}</td>
+            <td>${fmt(p.price)}</td>
+            <td>${p.badge||'—'}</td>
+            <td class="row-actions" style="white-space:nowrap;text-align:right">
+              <button onclick="editProduct('${p.id}')">Edit</button>
+              <button class="danger" onclick="delProduct('${p.id}')">Delete</button>
+            </td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function editProduct(id){
+  const p = id ? PRODUCTS.find(x=>x.id===id) : { name:'', price:0, cat:'Home', desc:'', badge:'', image:'', specs:{}, options:{}, palette:['#bfa987','#7a6a4f'] };
+  if(!p){ toast('Not found'); return; }
+  openModal(`
+    <h2>${id?'Edit product':'New product'}</h2>
+    <form id="pform">
+      <label>Name</label><input name="name" value="${p.name||''}" required/>
+      <label>Category</label>
+      <select name="cat">
+        ${['Planters','Tools','Apparel','Vessels','Paper','Home'].map(c=>`<option ${c===p.cat?'selected':''}>${c}</option>`).join('')}
+      </select>
+      <label>Price (AUD)</label><input name="price" type="number" step="0.01" value="${p.price||0}" required/>
+      <label>Badge (optional)</label><input name="badge" value="${p.badge||''}" placeholder="New, Bestseller, Limited"/>
+      <label>Image URL</label><input name="image" value="${p.image||''}" placeholder="https://…"/>
+      <label>Description</label><textarea name="desc">${p.desc||''}</textarea>
+      <label>Specs (one per line, key: value)</label>
+      <textarea name="specs" placeholder="Material: Stoneware\nOrigin: Japan">${Object.entries(p.specs||{}).map(([k,v])=>k+': '+v).join('\n')}</textarea>
+      <label>Options (one per line, name: a, b, c)</label>
+      <textarea name="options" placeholder="Size: Small, Medium, Large">${Object.entries(p.options||{}).map(([k,v])=>k+': '+v.join(', ')).join('\n')}</textarea>
+      <div style="margin-top:24px;display:flex;gap:10px;justify-content:flex-end">
+        <button type="button" class="btn small" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn primary small">Save</button>
+      </div>
+    </form>`);
+  document.getElementById('pform').onsubmit = async e=>{
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const specs = {}, options = {};
+    (fd.get('specs')||'').split('\n').forEach(l=>{ const m=l.match(/^\s*([^:]+):\s*(.+)$/); if(m) specs[m[1].trim()]=m[2].trim(); });
+    (fd.get('options')||'').split('\n').forEach(l=>{ const m=l.match(/^\s*([^:]+):\s*(.+)$/); if(m) options[m[1].trim()]=m[2].split(',').map(s=>s.trim()).filter(Boolean); });
+    const body = {
+      name: fd.get('name'), cat: fd.get('cat'), price: fd.get('price'),
+      badge: fd.get('badge'), image: fd.get('image'), desc: fd.get('desc'),
+      specs, options
+    };
+    try {
+      if(id) await api('/api/products/'+id, { method:'PUT', body });
+      else   await api('/api/products', { method:'POST', body });
+      toast('Saved');
+      closeModal();
+      await loadAll(); renderStats(); renderProducts();
+    } catch(err){ toast(err.message); }
+  };
+}
+
+async function delProduct(id){
+  if(!confirm('Delete this product?')) return;
+  try { await api('/api/products/'+id, { method:'DELETE' }); }
+  catch(err){ toast(err.message); return; }
+  toast('Deleted'); await loadAll(); renderStats(); renderProducts();
+}
+
+// ---------- Orders ----------
+function renderOrders(){
+  document.getElementById('tab-body').innerHTML = `
+    <h2 style="margin-bottom:20px">Orders</h2>
+    ${allOrders.length===0?'<p class="muted">No orders yet.</p>':`
+    <table class="admin">
+      <thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th></tr></thead>
+      <tbody>
+        ${allOrders.slice().reverse().map(o=>`
+          <tr>
+            <td><strong>${o.id}</strong></td>
+            <td>${o.name||'—'}<br><span class="muted" style="font-size:.78rem">${o.email||''}</span></td>
+            <td>${o.items.reduce((s,i)=>s+i.qty,0)}</td>
+            <td>${fmt(o.total)}</td>
+            <td>
+              <select onchange="setOrderStatus('${o.id}', this.value)">
+                ${['paid','packed','shipped','delivered','refunded'].map(s=>`<option ${s===o.status?'selected':''}>${s}</option>`).join('')}
+              </select>
+            </td>
+            <td class="muted" style="font-size:.82rem">${new Date(o.createdAt).toLocaleString()}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`}`;
+}
+async function setOrderStatus(id, status){
+  try { await api('/api/orders/'+id, { method:'PUT', body:{ status } }); toast('Updated'); await loadAll(); }
+  catch(err){ toast(err.message); }
+}
+
+// ---------- Users ----------
+function renderUsers(){
+  document.getElementById('tab-body').innerHTML = `
+    <h2 style="margin-bottom:20px">Users</h2>
+    <table class="admin">
+      <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th></th></tr></thead>
+      <tbody>
+        ${allUsers.map(u=>`
+          <tr>
+            <td>${u.name||'—'}</td>
+            <td>${u.email}</td>
+            <td>
+              <select onchange="setUserRole(${u.id}, this.value)" ${u.id===Auth.user.id?'disabled':''}>
+                <option ${u.role==='customer'?'selected':''}>customer</option>
+                <option ${u.role==='admin'?'selected':''}>admin</option>
+              </select>
+            </td>
+            <td>${u.disabled?'<span style="color:var(--danger)">disabled</span>':'active'}</td>
+            <td class="muted" style="font-size:.82rem">${new Date(u.createdAt).toLocaleDateString()}</td>
+            <td class="row-actions" style="white-space:nowrap;text-align:right">
+              ${u.id!==Auth.user.id?`
+                <button onclick="toggleUser(${u.id}, ${!u.disabled})">${u.disabled?'Enable':'Disable'}</button>
+                <button class="danger" onclick="delUser(${u.id})">Delete</button>
+              `:'<span class="muted" style="font-size:.78rem">(you)</span>'}
+            </td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+async function setUserRole(id, role){
+  try { await api('/api/users/'+id, { method:'PUT', body:{ role } }); toast('Role updated'); await loadAll(); }
+  catch(err){ toast(err.message); }
+}
+async function toggleUser(id, disabled){
+  try { await api('/api/users/'+id, { method:'PUT', body:{ disabled } }); toast(disabled?'Disabled':'Enabled'); await loadAll(); renderUsers(); }
+  catch(err){ toast(err.message); }
+}
+async function delUser(id){
+  if(!confirm('Permanently delete this user?')) return;
+  try { await api('/api/users/'+id, { method:'DELETE' }); toast('Deleted'); await loadAll(); renderStats(); renderUsers(); }
+  catch(err){ toast(err.message); }
+}
+
+// ---------- Modal ----------
+function openModal(html){
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal').classList.add('show');
+}
+function closeModal(){
+  document.getElementById('modal').classList.remove('show');
+}
+document.getElementById('modal').addEventListener('click', e=>{
+  if(e.target.id === 'modal') closeModal();
+});
+</script>
+</body>
+</html>

@@ -1,37 +1,89 @@
-# Acre — E-commerce POC
+# Acre — Full-stack ecommerce (dev branch)
 
-A vintage-minimalist ecommerce site inspired by acre.com.au, nho.agency, and bfcbuilt.com.au, with shop UX in the spirit of thebalconygarden.com.au.
+Vintage-minimalist storefront with a complete backend: auth, roles, dynamic product management, orders, and an admin panel. Built with Node.js built-ins only — **zero npm dependencies**.
 
 ## Run it
-Open `index.html` directly in a browser, or serve the folder:
 
 ```
-python -m http.server 8080
-# then visit http://localhost:8080
+node server.js
 ```
 
-## What's here
-- **index.html** — Hero, featured products, categories, editorial, newsletter
-- **shop.html** — Full product grid with category filter (`?cat=Planters`) and sorting
-- **product.html** — Detail page with options, quantity, specs, related products (`?id=p01`)
-- **cart.html** — Cart with quantity controls, subtotal, free-shipping nudge
-- **checkout.html** — Address form, shipping method, demo payment, order placement
-- **thanks.html** — Order confirmation with order number and summary
-- **about.html** — Journal / studio story
+Then open <http://localhost:8080>.
 
-## Features
-- 12 products across 6 categories with hand-built SVG illustrations (no external image assets needed)
-- LocalStorage-backed cart that persists across pages
-- Shipping calculator (standard / express / studio pickup) with free-shipping thresholds
-- AU GST (10%) display, AUD pricing
-- Order generation with unique order numbers
-- Fully responsive layout
-- No build step, no dependencies — vanilla HTML/CSS/JS
+On first run, `db.json` is auto-created and seeded with 12 products and a default admin account.
+
+## Default admin
+
+- Email: `admin@acre.local`
+- Password: `admin123`
+
+Sign in at `/login.html`, then access `/admin.html`. **Change this password before any real deployment.**
+
+## Storefront
+
+- `/` — Home, featured products, editorial
+- `/shop.html` — Product grid, filter by `?cat=Tools`, sort
+- `/product.html?id=p01` — Detail page with options, specs, related
+- `/cart.html` — Cart
+- `/checkout.html` — Checkout (creates a real server-side order)
+- `/thanks.html` — Order confirmation
+- `/about.html` — Studio story
+
+## Account
+
+- `/signup.html` — Create customer account
+- `/login.html` — Sign in (redirects to admin or account based on role)
+- `/account.html` — Profile, password change, order history, sign out
+
+## Admin (role: admin)
+
+`/admin.html` — three tabs:
+- **Products** — list, create, edit, delete (image URL, options, specs)
+- **Orders** — view all orders, change status (paid → packed → shipped → delivered → refunded)
+- **Users** — promote/demote, disable/enable, delete
+
+## API
+
+All under `/api`, JSON in/out. Sessions are HttpOnly cookies (30-day expiry, scrypt-hashed passwords).
+
+| Method | Path | Auth | Notes |
+|--------|------|------|-------|
+| POST   | /api/auth/signup | — | Returns user + sets session |
+| POST   | /api/auth/login  | — | |
+| POST   | /api/auth/logout | — | |
+| GET    | /api/auth/me     | — | Current user or null |
+| GET    | /api/products    | — | |
+| GET    | /api/products/:id | — | |
+| POST   | /api/products    | admin | |
+| PUT    | /api/products/:id | admin | |
+| DELETE | /api/products/:id | admin | |
+| POST   | /api/orders      | — | Anonymous checkout allowed |
+| GET    | /api/orders      | user/admin | Customer sees own; admin sees all |
+| PUT    | /api/orders/:id  | admin | Update status |
+| GET    | /api/users       | admin | |
+| PUT    | /api/users/:id   | admin | Change role/disabled/name |
+| DELETE | /api/users/:id   | admin | |
+| PUT    | /api/account     | user | Update own profile/password |
+
+## Architecture
+
+- `server.js` — single-file HTTP server, routing, API
+- `db.json` — JSON file database (gitignored, regenerated on first run)
+- `js/seed-products.js` — initial product seed
+- `js/products.js` — browser-side product fetching + image rendering
+- `js/app.js` — frontend Auth helper, Cart, chrome, API client
+- `css/style.css` — design system
+
+## Reset the database
+
+Delete `db.json` and restart the server.
 
 ## To take to production
-- Replace SVG placeholders with real product photography
-- Wire payment to Stripe / Afterpay (server-side keys required)
-- Add backend or move to Shopify/WooCommerce for real order processing
-- Add transactional email (SendGrid / Postmark)
-- Connect shipping rates to Australia Post API
-- Add CMS for the journal
+
+- Move from JSON file → SQLite/Postgres
+- Wire payment provider (Stripe / Afterpay) — server-side keys
+- Add email (transactional + marketing)
+- Connect Australia Post API for live shipping rates
+- HTTPS + secure cookies + CSRF tokens
+- Rate limiting on auth endpoints
+- Image upload to S3/Cloudinary instead of URL pasting

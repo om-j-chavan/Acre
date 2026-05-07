@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Sign in — Acre</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+<div id="header-mount"></div>
+
+<section class="pagehead"><div class="container"><span class="eyebrow">Account</span><h1>Sign in</h1></div></section>
+
+<div class="container" style="max-width:460px;padding:60px 28px 100px">
+  <form id="form" class="checkout" style="display:block">
+    <div class="form-block">
+      <label>Email</label>
+      <input name="email" type="email" required autofocus/>
+      <label>Password</label>
+      <input name="password" type="password" required/>
+      <p id="err" style="color:var(--danger);font-size:.85rem;min-height:1.2em;margin:10px 0 0"></p>
+      <button type="submit" class="btn primary full" style="margin-top:14px">Sign in</button>
+    </div>
+    <p class="muted" style="text-align:center;font-size:.88rem">
+      No account yet? <a href="signup.html" style="text-decoration:underline">Create one</a>
+    </p>
+    <p class="muted" style="text-align:center;font-size:.78rem;margin-top:30px">
+      Demo admin: <strong>admin@acre.local</strong> / <strong>admin123</strong>
+    </p>
+  </form>
+</div>
+
+<div id="footer-mount"></div>
+<script src="js/products.js"></script>
+<script src="js/app.js"></script>
+<script>
+  bootstrap('login').then(()=>{
+    if(Auth.user) location.href = 'account.html';
+  });
+  document.getElementById('form').onsubmit = async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    try {
+      await Auth.login(fd.get('email'), fd.get('password'));
+      const next = qs('next') || (Auth.user.role === 'admin' ? 'admin.html' : 'account.html');
+      location.href = next;
+    } catch(err){
+      document.getElementById('err').textContent = err.message;
+    }
+  };
+</script>
+</body>
+</html>

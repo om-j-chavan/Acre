@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Account — Acre</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+<div id="header-mount"></div>
+
+<section class="pagehead"><div class="container"><span class="eyebrow">Account</span><h1 id="hello">Welcome</h1></div></section>
+
+<div class="container" style="padding:50px 28px 100px">
+  <div id="body"></div>
+</div>
+
+<div id="footer-mount"></div>
+<script src="js/products.js"></script>
+<script src="js/app.js"></script>
+<script>
+  bootstrap('account').then(async ()=>{
+    if(!Auth.user){ location.href = 'login.html?next=account.html'; return; }
+    document.getElementById('hello').textContent = 'Hello, ' + (Auth.user.name || 'friend') + '.';
+    let orders = [];
+    try { orders = (await api('/api/orders')).orders; } catch{}
+    document.getElementById('body').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:50px" class="acct-grid">
+        <aside>
+          <h3 style="margin-bottom:14px">Profile</h3>
+          <form id="profile" style="display:block">
+            <label style="font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft)">Name</label>
+            <input name="name" value="${Auth.user.name||''}" style="width:100%;padding:12px;border:1px solid var(--line);background:var(--bg);margin:6px 0 14px"/>
+            <label style="font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft)">New password</label>
+            <input name="password" type="password" placeholder="Leave blank to keep current" style="width:100%;padding:12px;border:1px solid var(--line);background:var(--bg);margin:6px 0 14px"/>
+            <button class="btn small">Save</button>
+          </form>
+          <p class="muted" style="font-size:.85rem;margin-top:24px">${Auth.user.email}<br>Role: ${Auth.user.role}</p>
+          <button class="btn small" id="logout" style="margin-top:18px">Sign out</button>
+        </aside>
+        <section>
+          <h3 style="margin-bottom:14px">Orders (${orders.length})</h3>
+          ${orders.length===0 ? '<p class="muted">No orders yet. <a href="shop.html" style="text-decoration:underline">Start shopping</a>.</p>' :
+            orders.map(o=>`
+              <div style="border:1px solid var(--line);padding:20px;margin-bottom:14px;background:var(--bg-2)">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
+                  <strong style="font-family:var(--serif);font-size:1.1rem">${o.id}</strong>
+                  <span class="muted" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.15em">${o.status}</span>
+                </div>
+                <div class="muted" style="font-size:.82rem">${new Date(o.createdAt).toLocaleString()}</div>
+                <div style="margin:10px 0;font-size:.9rem">
+                  ${o.items.map(i=>`<div>${i.name} × ${i.qty} — ${fmt(i.price*i.qty)}</div>`).join('')}
+                </div>
+                <div style="display:flex;justify-content:space-between;border-top:1px solid var(--line);padding-top:10px;font-family:var(--serif)">
+                  <span>Total</span><span>${fmt(o.total)}</span>
+                </div>
+              </div>`).join('')
+          }
+        </section>
+      </div>
+      <style>@media(max-width:780px){.acct-grid{grid-template-columns:1fr !important}}</style>`;
+
+    document.getElementById('logout').onclick = async ()=>{ await Auth.logout(); location.href='index.html'; };
+    document.getElementById('profile').onsubmit = async e => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const body = { name: fd.get('name') };
+      if(fd.get('password')) body.password = fd.get('password');
+      try { await api('/api/account', { method:'PUT', body }); toast('Saved'); }
+      catch(err){ toast(err.message); }
+    };
+  });
+</script>
+</body>
+</html>

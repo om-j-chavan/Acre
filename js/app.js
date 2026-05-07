@@ -1,8 +1,45 @@
-// Acre — app logic
-const fmt = n => '$' + n.toFixed(2);
+// Acre — frontend app logic
+const fmt = n => '$' + Number(n).toFixed(2);
 
+// ---------- API helper ----------
+async function api(path, opts={}){
+  const r = await fetch(path, Object.assign({
+    credentials: 'same-origin',
+    headers: { 'Content-Type':'application/json' }
+  }, opts, opts.body ? { body: typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body) } : {}));
+  const ct = r.headers.get('content-type') || '';
+  const data = ct.includes('application/json') ? await r.json() : await r.text();
+  if(!r.ok) throw new Error((data && data.error) || ('HTTP '+r.status));
+  return data;
+}
+
+// ---------- Auth ----------
+const Auth = {
+  user: null,
+  async refresh(){
+    try {
+      const { user } = await api('/api/auth/me');
+      this.user = user;
+    } catch { this.user = null; }
+    return this.user;
+  },
+  async signup(email, name, password){
+    const { user } = await api('/api/auth/signup', { method:'POST', body:{ email, name, password } });
+    this.user = user; return user;
+  },
+  async login(email, password){
+    const { user } = await api('/api/auth/login', { method:'POST', body:{ email, password } });
+    this.user = user; return user;
+  },
+  async logout(){
+    await api('/api/auth/logout', { method:'POST' });
+    this.user = null;
+  }
+};
+
+// ---------- Cart (local storage; sent to server only at checkout) ----------
 const Cart = {
-  key:'acre_cart_v1',
+  key:'acre_cart_v2',
   read(){ try{return JSON.parse(localStorage.getItem(this.key))||[]}catch{return []} },
   write(items){ localStorage.setItem(this.key, JSON.stringify(items)); this.updateCount(); },
   add(id, qty=1, opts={}){
@@ -29,8 +66,7 @@ const Cart = {
     },0);
   },
   updateCount(){
-    const el = document.querySelector('.cart-count');
-    if(el) el.textContent = this.count();
+    document.querySelectorAll('.cart-count').forEach(el => el.textContent = this.count());
   }
 };
 
@@ -43,7 +79,14 @@ function toast(msg){
   t._tm = setTimeout(()=>t.classList.remove('show'), 2200);
 }
 
+// ---------- Chrome ----------
 function renderHeader(active){
+  const u = Auth.user;
+  const accountLink = u
+    ? `<a href="account.html" class="${active==='account'?'active':''}">${u.name || 'Account'}</a>`
+    : `<a href="login.html" class="${active==='login'?'active':''}">Sign in</a>`;
+  const adminLink = u && u.role === 'admin'
+    ? `<a href="admin.html" class="${active==='admin'?'active':''}" style="color:#a44a3f">Admin</a>` : '';
   return `
   <div class="topbar">Free shipping on orders over $150 · Australia-wide</div>
   <header class="site">
@@ -57,6 +100,8 @@ function renderHeader(active){
         <li><a href="about.html" class="${active==='about'?'active':''}">Journal</a></li>
       </ul>
       <div class="nav-actions">
+        ${adminLink}
+        ${accountLink}
         <a href="cart.html" class="cart-link">Cart<span class="cart-count">0</span></a>
       </div>
     </div>
@@ -82,20 +127,17 @@ function renderFooter(){
           </ul>
         </div>
         <div>
-          <h4>Help</h4>
+          <h4>Account</h4>
           <ul>
-            <li><a href="#">Shipping</a></li>
-            <li><a href="#">Returns</a></li>
-            <li><a href="#">Contact</a></li>
-            <li><a href="#">FAQ</a></li>
+            <li><a href="login.html">Sign in</a></li>
+            <li><a href="signup.html">Create account</a></li>
+            <li><a href="account.html">Orders</a></li>
           </ul>
         </div>
         <div>
           <h4>Studio</h4>
           <ul>
             <li><a href="about.html">Our story</a></li>
-            <li><a href="#">Makers</a></li>
-            <li><a href="#">Journal</a></li>
             <li><a href="#">Stockists</a></li>
           </ul>
         </div>
@@ -108,7 +150,8 @@ function renderFooter(){
   </footer>`;
 }
 
-function mountChrome(active){
+async function mountChrome(active){
+  await Auth.refresh();
   const h = document.getElementById('header-mount');
   const f = document.getElementById('footer-mount');
   if(h) h.innerHTML = renderHeader(active);
@@ -131,21 +174,21 @@ function productCard(p){
   </a>`;
 }
 
-// Shipping logic
 const SHIPPING = {
   standard:{ label:'Standard — 5-8 business days', cost:12, freeOver:150 },
   express :{ label:'Express — 2-3 business days', cost:24, freeOver:250 },
   pickup  :{ label:'Studio pickup — Melbourne', cost:0, freeOver:0 }
 };
-
 function shippingCost(method, subtotal){
-  const m = SHIPPING[method];
-  if(!m) return 0;
+  const m = SHIPPING[method]; if(!m) return 0;
   if(m.freeOver && subtotal >= m.freeOver) return 0;
   return m.cost;
 }
+function gst(amount){ return amount * 0.10; }
 
-function gst(amount){ return amount * 0.10; } // 10% AU GST already-included display
-
-// URL helpers
 function qs(name){ return new URLSearchParams(location.search).get(name); }
+
+async function bootstrap(active){
+  await loadProducts();
+  await mountChrome(active);
+}
