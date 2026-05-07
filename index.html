@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Acre — Considered objects for the garden and home</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+<div id="header-mount"></div>
+
+<section class="hero">
+  <div class="container">
+    <span class="eyebrow">Spring 2026 · Garden Edit</span>
+    <h1>Slow objects for a quieter way of living.</h1>
+    <p>Hand-made tools, vessels, and home goods drawn from the soil — sourced from independent makers who work the way things used to be made.</p>
+    <a href="shop.html" class="btn primary">Shop the collection</a>
+  </div>
+</section>
+
+<section class="block">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">Featured</span>
+        <h2>New this season</h2>
+      </div>
+      <a href="shop.html" class="muted" style="letter-spacing:.2em;text-transform:uppercase;font-size:.78rem">View all →</a>
+    </div>
+    <div class="products" id="featured"></div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">Categories</span>
+        <h2>Shop by craft</h2>
+      </div>
+    </div>
+    <div class="cats">
+      <a href="shop.html?cat=Planters" style="background:linear-gradient(135deg,#b08a6a,#8a674a)"><span>Planters</span></a>
+      <a href="shop.html?cat=Tools" style="background:linear-gradient(135deg,#9aa191,#5d6253)"><span>Tools</span></a>
+      <a href="shop.html?cat=Home" style="background:linear-gradient(135deg,#c4b59a,#7d6e54)"><span>Home</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="container">
+    <div class="editorial">
+      <div class="img" style="background:linear-gradient(135deg,#cabba0,#8a7a5d)"></div>
+      <div>
+        <span class="eyebrow">The studio</span>
+        <h2>Made by hand, made to last.</h2>
+        <p class="muted">Every piece in the Acre collection is the result of patient work — turned on a wheel, forged in a small workshop, woven on a hand loom. We choose makers who share a belief in slowness, in materials that age, in objects that carry meaning.</p>
+        <a href="about.html" class="btn small" style="margin-top:14px">Read our story</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">Shop</span>
+        <h2>The full collection</h2>
+      </div>
+    </div>
+    <div class="products" id="all"></div>
+  </div>
+</section>
+
+<section class="news">
+  <span class="eyebrow">Field notes</span>
+  <h2>Slow correspondence.</h2>
+  <p class="muted" style="max-width:48ch;margin:10px auto 0">A quiet letter from the studio, a few times a year. New makers, gardening notes, behind the work.</p>
+  <form onsubmit="event.preventDefault();toast('Thank you — subscribed');this.reset();">
+    <input type="email" required placeholder="you@example.com"/>
+    <button type="submit">Subscribe</button>
+  </form>
+</section>
+
+<div id="footer-mount"></div>
+
+<script src="js/products.js"></script>
+<script src="js/app.js"></script>
+<script>
+  mountChrome('home');
+  document.getElementById('featured').innerHTML = PRODUCTS.slice(0,4).map(productCard).join('');
+  document.getElementById('all').innerHTML = PRODUCTS.slice(4,12).map(productCard).join('');
+</script>
+</body>
+</html>

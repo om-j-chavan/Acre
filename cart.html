@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Cart — Acre</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+<div id="header-mount"></div>
+
+<section class="pagehead">
+  <div class="container">
+    <span class="eyebrow">Step 1 of 2</span>
+    <h1>Your cart</h1>
+  </div>
+</section>
+
+<div class="container">
+  <div id="cart-body"></div>
+</div>
+
+<div id="footer-mount"></div>
+
+<script src="js/products.js"></script>
+<script src="js/app.js"></script>
+<script>
+  mountChrome();
+  function render(){
+    const items = Cart.read();
+    const body = document.getElementById('cart-body');
+    if(items.length===0){
+      body.innerHTML = `
+        <div class="empty">
+          <h2>Your cart is empty</h2>
+          <p>Once you add a piece you love, it will live here.</p>
+          <a href="shop.html" class="btn primary">Browse the collection</a>
+        </div>`;
+      return;
+    }
+    const subtotal = Cart.subtotal();
+    const ship = shippingCost('standard', subtotal);
+    const total = subtotal + ship;
+
+    body.innerHTML = `
+      <div class="cart-wrap">
+        <div>
+          <div class="cart-items">
+            ${items.map(it=>{
+              const p = PRODUCTS.find(x=>x.id===it.id);
+              if(!p) return '';
+              const optTxt = Object.entries(it.opts||{}).map(([k,v])=>k+': '+v).join(' · ');
+              return `
+                <div class="cart-row">
+                  <div class="img" style="position:relative;overflow:hidden">${productImage(p)}</div>
+                  <div>
+                    <h4>${p.name}</h4>
+                    <div class="meta">${optTxt || p.cat}</div>
+                    <button class="remove" data-k="${it.k}">Remove</button>
+                  </div>
+                  <div class="qty">
+                    <button data-act="dec" data-k="${it.k}">−</button>
+                    <input type="number" value="${it.qty}" min="1" data-k="${it.k}" data-act="set"/>
+                    <button data-act="inc" data-k="${it.k}">+</button>
+                  </div>
+                  <div style="font-family:var(--serif);font-size:1.15rem">${fmt(p.price*it.qty)}</div>
+                </div>`;
+            }).join('')}
+          </div>
+          <div style="margin-top:30px"><a href="shop.html" class="muted" style="letter-spacing:.2em;text-transform:uppercase;font-size:.78rem">← Continue shopping</a></div>
+        </div>
+        <aside class="summary">
+          <h3>Order summary</h3>
+          <div class="line"><span>Subtotal</span><span>${fmt(subtotal)}</span></div>
+          <div class="line"><span>Shipping (standard)</span><span>${ship===0?'Free':fmt(ship)}</span></div>
+          <div class="line muted" style="font-size:.78rem"><span>GST included</span><span>${fmt(gst(subtotal))}</span></div>
+          <div class="line total"><span>Total</span><span>${fmt(total)}</span></div>
+          ${subtotal<150?`<p class="muted" style="font-size:.8rem;margin-top:14px">Add ${fmt(150-subtotal)} more for free shipping.</p>`:''}
+          <a href="checkout.html" class="btn primary full" style="margin-top:20px">Checkout</a>
+          <p class="muted" style="font-size:.72rem;text-align:center;margin-top:14px">Secure checkout · Stripe & Afterpay</p>
+        </aside>
+      </div>`;
+
+    body.querySelectorAll('.remove').forEach(b=>b.onclick=()=>{Cart.remove(b.dataset.k); render();});
+    body.querySelectorAll('[data-act]').forEach(el=>{
+      el.onchange = el.onclick = (e)=>{
+        const k = el.dataset.k, act = el.dataset.act;
+        const items = Cart.read();
+        const it = items.find(i=>i.k===k);
+        if(!it) return;
+        if(act==='inc') Cart.setQty(k, it.qty+1);
+        else if(act==='dec') Cart.setQty(k, it.qty-1);
+        else if(act==='set') Cart.setQty(k, +el.value || 1);
+        render();
+      };
+    });
+  }
+  render();
+</script>
+</body>
+</html>

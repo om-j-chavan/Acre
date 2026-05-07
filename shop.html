@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Shop — Acre</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+<div id="header-mount"></div>
+
+<section class="pagehead">
+  <div class="container">
+    <span class="eyebrow" id="cat-eyebrow">All Products</span>
+    <h1 id="cat-title">The Collection</h1>
+    <p>A curated edit of garden, tool and home goods — chosen for the way they wear, age, and last.</p>
+  </div>
+</section>
+
+<section style="padding:30px 0 90px">
+  <div class="container">
+    <div class="filterbar">
+      <div>
+        <span id="count">— items</span>
+      </div>
+      <div>
+        Sort by
+        <select id="sort">
+          <option value="featured">Featured</option>
+          <option value="price-asc">Price: Low to High</option>
+          <option value="price-desc">Price: High to Low</option>
+          <option value="name">Name</option>
+        </select>
+      </div>
+    </div>
+    <div class="products" id="grid"></div>
+  </div>
+</section>
+
+<div id="footer-mount"></div>
+
+<script src="js/products.js"></script>
+<script src="js/app.js"></script>
+<script>
+  mountChrome('shop');
+  const cat = qs('cat');
+  if(cat){
+    document.getElementById('cat-eyebrow').textContent = 'Category';
+    document.getElementById('cat-title').textContent = cat;
+  }
+  function render(){
+    let list = cat ? PRODUCTS.filter(p=>p.cat===cat) : PRODUCTS.slice();
+    const sort = document.getElementById('sort').value;
+    if(sort==='price-asc') list.sort((a,b)=>a.price-b.price);
+    if(sort==='price-desc') list.sort((a,b)=>b.price-a.price);
+    if(sort==='name') list.sort((a,b)=>a.name.localeCompare(b.name));
+    document.getElementById('count').textContent = list.length + ' items';
+    document.getElementById('grid').innerHTML = list.map(productCard).join('');
+  }
+  document.getElementById('sort').addEventListener('change', render);
+  render();
+</script>
+</body>
+</html>

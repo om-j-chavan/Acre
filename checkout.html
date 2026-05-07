@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Checkout — Acre</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+<div id="header-mount"></div>
+
+<section class="pagehead">
+  <div class="container">
+    <span class="eyebrow">Step 2 of 2</span>
+    <h1>Checkout</h1>
+  </div>
+</section>
+
+<div class="container">
+  <div id="checkout-body"></div>
+</div>
+
+<div id="footer-mount"></div>
+
+<script src="js/products.js"></script>
+<script src="js/app.js"></script>
+<script>
+  mountChrome();
+  let method = 'standard';
+
+  function renderSummary(){
+    const items = Cart.read();
+    const subtotal = Cart.subtotal();
+    const ship = shippingCost(method, subtotal);
+    const total = subtotal + ship;
+    return `
+      <aside class="osummary">
+        <h3 style="font-family:var(--serif);font-size:1.4rem;margin-bottom:18px">Order summary</h3>
+        ${items.map(it=>{
+          const p = PRODUCTS.find(x=>x.id===it.id);
+          return `<div class="item"><span>${p.name} × ${it.qty}</span><span>${fmt(p.price*it.qty)}</span></div>`;
+        }).join('')}
+        <div class="item" style="padding-top:16px"><span>Subtotal</span><span>${fmt(subtotal)}</span></div>
+        <div class="item"><span>Shipping</span><span>${ship===0?'Free':fmt(ship)}</span></div>
+        <div class="item" style="font-family:var(--serif);font-size:1.2rem;padding-top:14px"><span>Total (AUD)</span><span>${fmt(total)}</span></div>
+      </aside>`;
+  }
+
+  function render(){
+    const items = Cart.read();
+    if(items.length===0){
+      document.getElementById('checkout-body').innerHTML = `
+        <div class="empty">
+          <h2>Nothing to check out</h2>
+          <p>Your cart is empty.</p>
+          <a href="shop.html" class="btn primary">Browse the collection</a>
+        </div>`;
+      return;
+    }
+    document.getElementById('checkout-body').innerHTML = `
+      <form class="checkout" id="form">
+        <div>
+          <div class="form-block">
+            <h3>Contact</h3>
+            <label>Email</label>
+            <input type="email" name="email" required/>
+          </div>
+          <div class="form-block">
+            <h3>Shipping address</h3>
+            <div class="row">
+              <div><label>First name</label><input name="first" required/></div>
+              <div><label>Last name</label><input name="last" required/></div>
+            </div>
+            <label>Address</label>
+            <input name="addr" required/>
+            <div class="row">
+              <div><label>Suburb</label><input name="suburb" required/></div>
+              <div><label>Postcode</label><input name="post" required pattern="\\d{4}"/></div>
+            </div>
+            <div class="row">
+              <div>
+                <label>State</label>
+                <select name="state" required>
+                  <option value="">Select…</option>
+                  <option>VIC</option><option>NSW</option><option>QLD</option>
+                  <option>WA</option><option>SA</option><option>TAS</option>
+                  <option>ACT</option><option>NT</option>
+                </select>
+              </div>
+              <div>
+                <label>Country</label>
+                <select name="country"><option>Australia</option><option>New Zealand</option></select>
+              </div>
+            </div>
+          </div>
+          <div class="form-block">
+            <h3>Shipping method</h3>
+            <div class="ship-options" id="ship">
+              ${Object.entries(SHIPPING).map(([k,m])=>`
+                <label class="${k===method?'selected':''}">
+                  <span><input type="radio" name="ship" value="${k}" ${k===method?'checked':''}/> ${m.label}</span>
+                  <span>${m.cost===0?'Free':fmt(m.cost)}</span>
+                </label>`).join('')}
+            </div>
+          </div>
+          <div class="form-block">
+            <h3>Payment</h3>
+            <p class="muted" style="font-size:.85rem;margin:0 0 14px">Demo checkout — no card will be charged.</p>
+            <label>Card number</label>
+            <input name="card" placeholder="4242 4242 4242 4242" required/>
+            <div class="row">
+              <div><label>Expiry</label><input name="exp" placeholder="MM/YY" required/></div>
+              <div><label>CVC</label><input name="cvc" placeholder="123" required/></div>
+            </div>
+            <label>Name on card</label>
+            <input name="cardname" required/>
+          </div>
+          <button type="submit" class="btn primary full">Place order</button>
+        </div>
+        <div id="osum">${renderSummary()}</div>
+      </form>`;
+
+    document.querySelectorAll('input[name="ship"]').forEach(r=>{
+      r.onchange = ()=>{
+        method = r.value;
+        document.querySelectorAll('#ship label').forEach(l=>l.classList.remove('selected'));
+        r.closest('label').classList.add('selected');
+        document.getElementById('osum').innerHTML = renderSummary();
+      };
+    });
+
+    document.getElementById('form').onsubmit = (e)=>{
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const order = {
+        no: 'ACRE-'+Math.floor(100000+Math.random()*900000),
+        email: fd.get('email'),
+        name: fd.get('first')+' '+fd.get('last'),
+        method,
+        items: Cart.read().map(it=>{
+          const p = PRODUCTS.find(x=>x.id===it.id);
+          return {name:p.name, qty:it.qty, price:p.price, opts:it.opts};
+        }),
+        subtotal: Cart.subtotal(),
+        shipping: shippingCost(method, Cart.subtotal()),
+        date: new Date().toISOString()
+      };
+      order.total = order.subtotal + order.shipping;
+      localStorage.setItem('acre_last_order', JSON.stringify(order));
+      Cart.clear();
+      location.href = 'thanks.html';
+    };
+  }
+  render();
+</script>
+</body>
+</html>

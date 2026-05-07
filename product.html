@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Product — Acre</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+<div id="header-mount"></div>
+
+<div class="container">
+  <div class="pdetail" id="pd"></div>
+</div>
+
+<section class="block">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">You may also like</span>
+        <h2>Quiet companions</h2>
+      </div>
+    </div>
+    <div class="products" id="related"></div>
+  </div>
+</section>
+
+<div id="footer-mount"></div>
+
+<script src="js/products.js"></script>
+<script src="js/app.js"></script>
+<script>
+  mountChrome('shop');
+  const id = qs('id') || 'p01';
+  const p = PRODUCTS.find(x=>x.id===id) || PRODUCTS[0];
+  document.title = p.name + ' — Acre';
+
+  const optsHtml = Object.entries(p.options).map(([k,vals])=>`
+    <div class="opt">
+      <label>${k}</label>
+      <select data-opt="${k}">
+        ${vals.map(v=>`<option>${v}</option>`).join('')}
+      </select>
+    </div>`).join('');
+
+  const specsHtml = Object.entries(p.specs).map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('');
+
+  document.getElementById('pd').innerHTML = `
+    <div class="gallery" style="position:relative;overflow:hidden">${productImage(p)}</div>
+    <div>
+      <span class="eyebrow">${p.cat}${p.badge?' · '+p.badge:''}</span>
+      <h1>${p.name}</h1>
+      <div class="price">${fmt(p.price)} <span class="muted" style="font-size:.8rem">incl. GST</span></div>
+      <p class="desc">${p.desc}</p>
+      ${optsHtml}
+      <div class="opt">
+        <label>Quantity</label>
+        <div class="qty">
+          <button id="dec">−</button>
+          <input id="q" type="number" value="1" min="1"/>
+          <button id="inc">+</button>
+        </div>
+      </div>
+      <button id="add" class="btn primary full">Add to cart</button>
+      <p class="muted" style="font-size:.78rem;margin-top:18px">Free standard shipping on orders over $150 · Ships from Melbourne in 1–2 days</p>
+      <div class="specs">
+        <h3 style="font-size:1rem;letter-spacing:.18em;text-transform:uppercase;font-family:var(--sans);font-weight:400;margin-bottom:18px">Specifications</h3>
+        <dl>${specsHtml}</dl>
+      </div>
+    </div>`;
+
+  document.getElementById('related').innerHTML =
+    PRODUCTS.filter(x=>x.id!==p.id).slice(0,4).map(productCard).join('');
+
+  const qty = document.getElementById('q');
+  document.getElementById('inc').onclick = ()=>qty.value = +qty.value + 1;
+  document.getElementById('dec').onclick = ()=>qty.value = Math.max(1, +qty.value - 1);
+
+  document.getElementById('add').onclick = ()=>{
+    const opts = {};
+    document.querySelectorAll('[data-opt]').forEach(s=>opts[s.dataset.opt]=s.value);
+    Cart.add(p.id, +qty.value, opts);
+  };
+</script>
+</body>
+</html>
